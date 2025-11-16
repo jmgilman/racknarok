@@ -35,22 +35,22 @@
   scripts.bootstrap.exec = ''
     echo "🚀 Bootstrapping Proxmox node..."
     echo "Usage: bootstrap <node-name>"
-    uv run orchestrator/orchestrator.py bootstrap "$@"
+    uv run --directory orchestrator orchestrator bootstrap "$@"
   '';
 
   scripts.provision.exec = ''
     echo "🏗️  Provisioning VMs..."
-    uv run orchestrator/orchestrator.py provision "$@"
+    uv run --directory orchestrator orchestrator provision "$@"
   '';
 
   scripts.deploy.exec = ''
     echo "🚢 Running full deployment..."
-    uv run orchestrator/orchestrator.py deploy "$@"
+    uv run --directory orchestrator orchestrator deploy "$@"
   '';
 
   scripts.sync-config.exec = ''
     echo "🔄 Syncing config to ESC..."
-    uv run orchestrator/orchestrator.py sync-config "$@"
+    uv run --directory orchestrator orchestrator sync-config "$@"
   '';
 
   scripts.edit-secret = {
