@@ -71,14 +71,15 @@ jobs:
 
       - name: Install Node.js dependencies
         shell: devenv shell bash -- -e {0}
-        working-directory: pulumi/esc-sync
-        run: npm install
+        run: |
+          cd pulumi/esc-sync
+          npm install
 
       - name: Pulumi Preview (PR)
         if: github.event_name == 'pull_request'
         shell: devenv shell bash -- -e {0}
-        working-directory: pulumi/esc-sync
         run: |
+          cd pulumi/esc-sync
           echo "🔍 Running Pulumi preview..."
           pulumi stack select prod --create
           pulumi preview --diff --color always
@@ -88,8 +89,8 @@ jobs:
       - name: Pulumi Up (Main branch)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: devenv shell bash -- -e {0}
-        working-directory: pulumi/esc-sync
         run: |
+          cd pulumi/esc-sync
           echo "🚀 Running Pulumi up..."
           pulumi stack select prod --create
           pulumi up --yes --skip-preview --color always
