@@ -7,6 +7,12 @@ nodes:
     fqdn: rk1.racknarok.internal
     datacenter: rbx  # OVH datacenter code
 
+    # SSH access for bootstrap
+    # This must be accessible before Tailscale is configured
+    ssh_host: 15.204.85.151  # Public IP from secrets/proxmox/network.enc.yaml
+    ssh_user: root
+    ssh_port: 22
+
     # Network configuration
     network:
       # Public interface (from OVH)

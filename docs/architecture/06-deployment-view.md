@@ -322,10 +322,11 @@ sops -e secrets/new-secret.yaml > secrets/new-secret.enc.yaml
    orchestrator.py bootstrap rk1
    ```
    - Connects via bootstrap SSH key
-   - Installs Tailscale on Proxmox host
+   - Installs Tailscale on Proxmox host (joins Tailscale network)
+   - Enables Tailscale SSH for secure access
    - Configures firewall to block public access (except Tailscale)
-   - Configures Tailscale as subnet router
    - Post-bootstrap: All access via Tailscale only
+   - Note: Subnet routing configured separately via dedicated router VM
 
 3. **Automated Deployment**:
    ```bash

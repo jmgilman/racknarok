@@ -1,0 +1,33 @@
+---
+# Main tasks for proxmox-bootstrap role
+
+- name: Wait for Tailscale to be fully connected
+  ansible.builtin.command: tailscale status --json
+  register: tailscale_status
+  until: tailscale_status.rc == 0
+  retries: 12
+  delay: 5
+  changed_when: false
+  when: not skip_tailscale | default(false)
+
+- name: Parse Tailscale status
+  ansible.builtin.set_fact:
+    tailscale_info: "{{ tailscale_status.stdout | from_json }}"
+  when:
+    - not skip_tailscale | default(false)
+    - tailscale_status is defined
+
+- name: Display Tailscale connection info
+  ansible.builtin.debug:
+    msg:
+      - "Tailscale connected successfully!"
+      - "Tailscale IP: {{ tailscale_info.Self.TailscaleIPs[0] | default('unknown') }}"
+      - "Hostname: {{ tailscale_info.Self.HostName | default('unknown') }}"
+  when:
+    - not skip_tailscale | default(false)
+    - tailscale_info is defined
+    - tailscale_verbose | default(false)
+
+- name: Configure firewall lockdown
+  ansible.builtin.include_tasks: security-lockdown.yml
+  when: firewall_enable | default(true)

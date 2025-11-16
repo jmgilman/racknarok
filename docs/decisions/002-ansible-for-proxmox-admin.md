@@ -149,10 +149,11 @@ run(
 
 **proxmox-bootstrap**:
 - Install Tailscale from Proxmox package repositories
-- Configure Tailscale as subnet router (advertise vRack)
+- Join Proxmox host to Tailscale network (no route advertisement)
+- Set up Tailscale SSH for secure access
 - Configure firewall to block public access (except Tailscale)
 - Disable Proxmox web UI on public interface
-- Set up Tailscale SSH
+- Note: vRack subnet routing handled by dedicated router VM, not Proxmox hosts
 
 **proxmox-networking**:
 - Create vRack bridge (vmbr1)

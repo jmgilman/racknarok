@@ -1,0 +1,35 @@
+---
+# Role metadata and dependencies
+galaxy_info:
+  author: Project Racknarok
+  description: Bootstrap Proxmox nodes with Tailscale and security lockdown
+  license: MIT
+  min_ansible_version: "2.12"
+  platforms:
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+
+dependencies:
+  # Use artis3n.tailscale collection for Tailscale installation
+  # This should be installed via: ansible-galaxy collection install artis3n.tailscale
+  # The dependency runs FIRST, before tasks/main.yml, so we configure it here
+  - role: artis3n.tailscale.machine
+    vars:
+      # Pass through the OAuth client secret as authkey
+      # tailscale_authkey: defined by caller (orchestrator extravars)
+
+      # Build Tailscale CLI arguments
+      # Note: Proxmox hosts do NOT advertise routes - that's handled by dedicated router VM
+      tailscale_args: "{% if tailscale_enable_ssh | default(true) %}--ssh{% endif %}"
+
+      # OAuth configuration
+      # tailscale_tags: defined by caller (orchestrator extravars)
+      # tailscale_oauth_ephemeral: from defaults or caller
+      # tailscale_oauth_preauthorized: from defaults or caller
+
+      # Installation state
+      state: "{{ tailscale_state | default('latest') }}"
+      verbose: "{{ tailscale_verbose | default(true) }}"
+    when: not skip_tailscale | default(false)

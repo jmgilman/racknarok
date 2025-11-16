@@ -20,6 +20,11 @@ environments:
       - secrets/proxmox/ssh.enc.yaml
       - secrets/proxmox/certificates.enc.yaml
 
+  # Tailscale service
+  tailscale:
+    secrets:
+      - secrets/services/tailscale.enc.yaml
+
   # Future environments (examples):
   #
   # # Management Talos cluster
@@ -28,13 +33,6 @@ environments:
   #     - config/talos/mgmt-cluster.yaml
   #   secrets:
   #     - secrets/talos/secrets.enc.yaml
-  #
-  # # Tailscale service
-  # services-tailscale:
-  #   config:
-  #     - config/services/tailscale.yaml
-  #   secrets:
-  #     - secrets/services/tailscale.enc.yaml
   #
   # # DNS service
   # services-dns:

@@ -127,7 +127,7 @@ Developer modifies config/secrets in Git
 ```
 Operator Laptop (Tailscale client)
   → Tailscale mesh network
-  → Subnet router (on Proxmox host or utility VM)
+  → Subnet router (dedicated NixOS utility VM)
   → vRack network
   → Proxmox / Kubernetes API / Talos API
 ```

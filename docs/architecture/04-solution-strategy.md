@@ -40,16 +40,20 @@ Project Racknarok uses a **layered architecture** built from bare metal up to ap
 - Enables zero-trust networking for operators
 
 **Implementation**:
-- Tailscale subnet router on Proxmox host or utility VM
-- Advertise vRack subnet (`10.0.0.0/24`) to Tailscale network
+- Dedicated NixOS utility VM acts as Tailscale subnet router
+- Subnet router advertises vRack subnet (`10.0.0.0/24`) to Tailscale network
+- Proxmox hosts join Tailscale but do NOT advertise routes (for simplicity and clean separation)
 - No Proxmox, Kubernetes API, or Talos API ports exposed publicly
 - OVH Load Balancer used exclusively for application HTTP/S traffic
 
 **Bootstrapping Security**:
 - Initial Proxmox installation exposes port 8006 publicly (OVH default)
 - **Critical**: First bootstrap step installs Tailscale and locks down public access
+  - Proxmox hosts join Tailscale network (SSH access enabled)
+  - No subnet route advertisement on Proxmox hosts
 - Bootstrap uses SSH key pre-configured during OVH installation wizard
 - Post-bootstrap access exclusively via Tailscale SSH
+- Dedicated subnet router VM deployed separately after bootstrap
 - This is a **manual** operation (not automated via CI) performed once per physical server
 
 ### Technology Stack
@@ -221,8 +225,10 @@ Git Repository (Single Source of Truth)
 - Configuration management (Git → ESC pipeline)
 - Orchestrator for deployment workflows
 - Ansible for Proxmox host management
+- Proxmox hosts join Tailscale (no route advertisement)
+- Dedicated subnet router VM (NixOS) for vRack routing
 - Management cluster (Talos VMs)
-- Tailscale subnet routing + security lockdown
+- Security lockdown (public access blocked)
 - Internal DNS + split DNS
 - Core platform services (Argo, Crossplane, Vault)
 - Cilium networking, Longhorn storage
