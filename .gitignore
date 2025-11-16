@@ -1,0 +1,53 @@
+# Nix/devenv
+.devenv/
+.direnv/
+devenv.local.nix
+
+# Environment variables (local overrides)
+.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+
+# Secrets - DO NOT COMMIT UNENCRYPTED SECRETS
+secrets/**/*.yaml
+!secrets/**/*.enc.yaml
+!secrets/.sops.yaml
+!secrets/README.md
+
+# SOPS/age keys (must be kept local, stored in ESC)
+secrets/.age-key.txt
+secrets/.age-key.txt.backup.*
+keys.txt
+age-key.txt
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Pulumi
+.pulumi/
+Pulumi.*.yaml
+
+# Ansible
+*.retry
+.ansible/
+
+# Terraform (if we ever use it)
+.terraform/
+*.tfstate
+*.tfstate.backup
+
+# Temporary files
+tmp/
+*.tmp

@@ -1,0 +1,44 @@
+# ESC Environment Mapping Configuration
+# Defines how configuration and secrets from Git are mapped to Pulumi ESC environments
+#
+# This file is consumed by the pulumi/esc-sync/ project to automatically
+# synchronize configuration and secrets to Pulumi ESC.
+#
+# ESC Organization: jmgilman (configured via PULUMI_ORG environment variable)
+
+environments:
+  # Proxmox environment
+  # Contains all Proxmox-related configuration and secrets
+  proxmox:
+    config:
+      - config/proxmox/cluster.yaml
+      - config/proxmox/nodes.yaml
+      - config/proxmox/firewall.yaml
+    secrets:
+      - secrets/proxmox/api.enc.yaml
+      - secrets/proxmox/network.enc.yaml
+      - secrets/proxmox/ssh.enc.yaml
+      - secrets/proxmox/certificates.enc.yaml
+
+  # Future environments (examples):
+  #
+  # # Management Talos cluster
+  # talos-mgmt:
+  #   config:
+  #     - config/talos/mgmt-cluster.yaml
+  #   secrets:
+  #     - secrets/talos/secrets.enc.yaml
+  #
+  # # Tailscale service
+  # services-tailscale:
+  #   config:
+  #     - config/services/tailscale.yaml
+  #   secrets:
+  #     - secrets/services/tailscale.enc.yaml
+  #
+  # # DNS service
+  # services-dns:
+  #   config:
+  #     - config/services/dns.yaml
+  #   secrets:
+  #     - secrets/services/dns.enc.yaml
