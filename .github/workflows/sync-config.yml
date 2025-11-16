@@ -1,0 +1,96 @@
+name: Sync Config to ESC
+
+on:
+  pull_request:
+    paths:
+      - 'config/**'
+      - 'secrets/**'
+      - 'pulumi/esc-sync/**'
+      - '.github/workflows/sync-config.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/**'
+      - 'secrets/**'
+      - 'pulumi/esc-sync/**'
+      - '.github/workflows/sync-config.yml'
+
+# Required for OIDC authentication to Pulumi Cloud
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write  # For PR comments
+
+jobs:
+  sync:
+    name: Sync Configuration to Pulumi ESC
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Cachix for devenv
+        uses: cachix/cachix-action@v16
+        with:
+          name: devenv
+
+      - name: Install devenv.sh
+        shell: bash
+        run: nix profile install nixpkgs#devenv
+
+      - name: Authenticate to Pulumi Cloud (OIDC)
+        uses: pulumi/auth-actions@v1
+        with:
+          organization: jmgilman
+          requested-token-type: urn:pulumi:token-type:access_token:personal
+
+      - name: Retrieve SOPS age key from ESC
+        shell: devenv shell bash -- -e {0}
+        run: |
+          echo "📥 Retrieving SOPS age key from ESC..."
+
+          # The key is stored in jmgilman/default/ci environment
+          SOPS_KEY=$(esc env open jmgilman/default/ci --format json | jq -r '.sops.private_key')
+
+          if [ -z "$SOPS_KEY" ] || [ "$SOPS_KEY" = "null" ]; then
+            echo "❌ Error: Failed to retrieve SOPS key from ESC"
+            exit 1
+          fi
+
+          # Export as environment variable for subsequent steps
+          echo "SOPS_AGE_KEY=$SOPS_KEY" >> $GITHUB_ENV
+          echo "✅ SOPS age key retrieved successfully"
+
+      - name: Install Node.js dependencies
+        shell: devenv shell bash -- -e {0}
+        working-directory: pulumi/esc-sync
+        run: npm install
+
+      - name: Pulumi Preview (PR)
+        if: github.event_name == 'pull_request'
+        shell: devenv shell bash -- -e {0}
+        working-directory: pulumi/esc-sync
+        run: |
+          echo "🔍 Running Pulumi preview..."
+          pulumi stack select prod --create
+          pulumi preview --diff --color always
+        env:
+          SOPS_AGE_KEY: ${{ env.SOPS_AGE_KEY }}
+
+      - name: Pulumi Up (Main branch)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: devenv shell bash -- -e {0}
+        working-directory: pulumi/esc-sync
+        run: |
+          echo "🚀 Running Pulumi up..."
+          pulumi stack select prod --create
+          pulumi up --yes --skip-preview --color always
+        env:
+          SOPS_AGE_KEY: ${{ env.SOPS_AGE_KEY }}
