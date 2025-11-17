@@ -51,3 +51,5 @@ Pulumi.*.yaml
 # Temporary files
 tmp/
 *.tmp
+
+node_modules/

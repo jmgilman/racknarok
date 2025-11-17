@@ -25,6 +25,15 @@ environments:
     secrets:
       - secrets/services/tailscale.enc.yaml
 
+  # NixOS VMs environment
+  # Contains configuration for NixOS-based infrastructure VMs
+  nixos-vms:
+    config:
+      - config/nixos/vms.yaml
+    secrets:
+      - secrets/nixos/secrets.enc.yaml
+      - secrets/proxmox/ssh.enc.yaml  # Reuse Proxmox admin SSH key
+
   # Future environments (examples):
   #
   # # Management Talos cluster

@@ -43,3 +43,9 @@
 - name: Configure firewall lockdown
   ansible.builtin.include_tasks: security-lockdown.yml
   when: firewall_enable | default(true)
+
+- name: Create Proxmox API token for automation
+  ansible.builtin.include_tasks: api-token.yml
+
+- name: Download required ISO images
+  ansible.builtin.include_tasks: download-isos.yml

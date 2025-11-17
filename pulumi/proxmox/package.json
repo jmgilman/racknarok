@@ -1,0 +1,18 @@
+{
+  "name": "@racknarok/pulumi-proxmox",
+  "version": "0.1.0",
+  "description": "Pulumi project for provisioning VMs on Proxmox",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf bin/"
+  },
+  "dependencies": {
+    "@pulumi/pulumi": "^3.113.0",
+    "@muhlba91/pulumi-proxmoxve": "^6.15.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

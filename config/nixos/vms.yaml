@@ -1,0 +1,25 @@
+# NixOS VM Definitions
+# These VMs will be provisioned via Pulumi and configured with NixOS
+
+vms:
+  - name: tailscale-router
+    description: Tailscale subnet router for vRack network
+    node: rk1  # Proxmox node to create VM on
+
+    # Hardware configuration
+    cpus: 2
+    memory: 2048  # MB
+    disk: 20      # GB
+
+    # Network configuration
+    network:
+      bridge: vmbr1  # vRack bridge
+      ip: 10.0.0.10/24
+      gateway: 10.0.0.1
+      nameservers:
+        - 1.1.1.1
+        - 8.8.8.8
+
+    # NixOS configuration reference
+    # This should match the hostname in nixos/flake.nix
+    nixos_config: tailscale-router

@@ -1,0 +1,28 @@
+---
+# Download ISO images needed for VM provisioning
+
+- name: Ensure ISO directory exists
+  ansible.builtin.file:
+    path: /var/lib/vz/template/iso
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Check if NixOS ISO already exists
+  ansible.builtin.stat:
+    path: /var/lib/vz/template/iso/nixos-minimal-23.11.iso
+  register: nixos_iso
+
+- name: Download NixOS minimal ISO
+  ansible.builtin.get_url:
+    url: https://channels.nixos.org/nixos-23.11/latest-nixos-minimal-x86_64-linux.iso
+    dest: /var/lib/vz/template/iso/nixos-minimal-23.11.iso
+    mode: '0644'
+    timeout: 600
+  when: not nixos_iso.stat.exists
+  register: iso_download
+
+- name: Display ISO download result
+  ansible.builtin.debug:
+    msg: "NixOS ISO {{ 'downloaded' if iso_download.changed else 'already present' }}"

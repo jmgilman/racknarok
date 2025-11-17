@@ -40,8 +40,13 @@ for (const [envName, envConfig] of Object.entries(mapping.environments)) {
     console.log(`Loaded ${Object.keys(data).length} top-level keys`);
 
     // Create the ESC environment YAML structure
+    // pulumiConfig must be nested under 'values' per Pulumi ESC documentation
+    // Keys are accessible to Pulumi programs without project prefix (use pulumi.Config(''))
+    // or with explicit prefix like 'proxmox:vms' if needed by specific projects
     const escYaml = {
-        values: data,
+        values: {
+            pulumiConfig: data,  // Nest all data under values.pulumiConfig
+        },
     };
 
     // Convert to YAML string

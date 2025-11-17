@@ -1,0 +1,6 @@
+# SOPS configuration for NixOS secrets
+# This uses the same age key as the main project
+
+creation_rules:
+  - path_regex: secrets/secrets\.yaml$
+    age: age16u38wxvlqphcxz6rvju3z6y9qwz2lue098l3xevzlzvrffvxt58suuhew4

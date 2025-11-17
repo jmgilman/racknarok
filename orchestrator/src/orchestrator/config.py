@@ -134,10 +134,10 @@ def load_esc_config(
 
         # The values should already be a dictionary with evaluated/decrypted values
         if isinstance(values, dict):
-            return values
+            return values["pulumiConfig"]
         # If it's a Mapping but not a dict, convert it
         elif hasattr(values, 'items'):
-            return dict(values)
+            return dict(values)["pulumiConfig"]
         else:
             raise ConfigError(
                 f"Unexpected values type from ESC: {type(values)}"

@@ -50,3 +50,10 @@ firewall_reset_marker_path: "/var/lib/racknarok/proxmox-bootstrap/ufw_reset_done
 firewall_ssh_port: 22
 firewall_ssh_allowed_sources: []
 firewall_proxmox_allowed_sources: []
+
+# API Token configuration
+proxmox_api_user: "automation@pve"
+proxmox_api_token_name: "infra"
+proxmox_api_token_comment: "Infrastructure automation token created by orchestrator"
+proxmox_api_token_temp_file: "/tmp/proxmox-api-token.json"
+# Local file path will be set by orchestrator based on inventory_hostname
