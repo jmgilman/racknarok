@@ -1,0 +1,65 @@
+---
+# Register storage pool in Proxmox configuration
+
+- name: Check if storage is already registered in Proxmox
+  ansible.builtin.command: "pvesm status --storage {{ pool.name }}"
+  register: storage_registered
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Display registration status
+  ansible.builtin.debug:
+    msg: "Storage {{ pool.name }} {{ 'is already registered' if storage_registered.rc == 0 else 'will be registered' }} in Proxmox"
+
+- name: Determine actual ZFS pool name to use
+  ansible.builtin.set_fact:
+    zfs_pool_to_register: "{{ pool_to_use | default(pool.pool) }}"
+  when: pool.type == 'zfs'
+
+- name: Check if ZFS pool exists (for ZFS storage)
+  ansible.builtin.command: "zpool list {{ zfs_pool_to_register }}"
+  register: zfs_pool_check
+  changed_when: false
+  failed_when: false
+  become: true
+  when: pool.type == 'zfs'
+
+- name: Fail if ZFS pool does not exist
+  ansible.builtin.fail:
+    msg: "ZFS pool '{{ zfs_pool_to_register }}' does not exist. Cannot register storage in Proxmox."
+  when:
+    - pool.type == 'zfs'
+    - zfs_pool_check.rc != 0
+
+- name: Register ZFS storage in Proxmox
+  ansible.builtin.command: >
+    pvesm add zfspool {{ pool.name }}
+    --pool {{ zfs_pool_to_register }}
+    --content {{ pool.content | default(['images', 'rootdir']) | join(',') }}
+    {% if pool.nodes is defined %}--nodes {{ pool.nodes | join(',') }}{% endif %}
+  become: true
+  when:
+    - pool.type == 'zfs'
+    - storage_registered.rc != 0
+  register: pvesm_add_zfs
+
+- name: Verify storage registration
+  ansible.builtin.command: "pvesm status --storage {{ pool.name }}"
+  register: verify_registration
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Display storage status
+  ansible.builtin.debug:
+    msg: "{{ verify_registration.stdout_lines }}"
+  when: verify_registration.rc == 0
+
+- name: Confirm storage is active
+  ansible.builtin.assert:
+    that:
+      - verify_registration.rc == 0
+      - "'active' in verify_registration.stdout or 'enabled' in verify_registration.stdout"
+    fail_msg: "Storage {{ pool.name }} registration failed or is not active"
+    success_msg: "✓ Storage {{ pool.name }} is registered and active in Proxmox"

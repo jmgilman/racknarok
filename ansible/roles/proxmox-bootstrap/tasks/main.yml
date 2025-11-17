@@ -1,14 +1,26 @@
 ---
 # Main tasks for proxmox-bootstrap role
 
-- name: Wait for Tailscale to be fully connected
-  ansible.builtin.command: tailscale status --json
-  register: tailscale_status
-  until: tailscale_status.rc == 0
-  retries: 12
-  delay: 5
-  changed_when: false
-  when: not skip_tailscale | default(false)
+- block:
+    - name: Wait for Tailscale to be fully connected
+      ansible.builtin.command: tailscale status --json
+      register: tailscale_status
+      until: tailscale_status.rc == 0
+      retries: 12
+      delay: 5
+      changed_when: false
+      when: not skip_tailscale | default(false)
+  rescue:
+    - name: Show last Tailscale status error
+      ansible.builtin.debug:
+        msg:
+          - "tailscale status --json failed after {{ (tailscale_status.attempts | default(0)) }} attempts"
+          - "{{ tailscale_status.stderr | default(tailscale_status.stdout | default('no stderr/stdout captured')) }}"
+      when: tailscale_status is defined
+    - name: Abort because Tailscale did not connect
+      ansible.builtin.fail:
+        msg: "Tailscale never reported ready; refusing to continue bootstrap"
+      when: not skip_tailscale | default(false)
 
 - name: Parse Tailscale status
   ansible.builtin.set_fact:

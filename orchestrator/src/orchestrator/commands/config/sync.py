@@ -23,8 +23,8 @@ def get_repo_root() -> Path:
     """
     # Get the directory containing this file
     current_file = Path(__file__).resolve()
-    # Navigate up: commands/ -> orchestrator/ -> src/ -> orchestrator/ -> repo_root
-    repo_root = current_file.parent.parent.parent.parent.parent
+    # Navigate up: config/ -> commands/ -> orchestrator/ -> src/ -> orchestrator/ -> repo_root
+    repo_root = current_file.parent.parent.parent.parent.parent.parent
     return repo_root
 
 
@@ -179,7 +179,7 @@ def display_summary(result: auto.UpResult | auto.PreviewResult, dry_run: bool) -
     click.echo("=" * 60)
 
 
-@click.command(name="sync-config")
+@click.command(name="sync")
 @click.option(
     "--environment",
     "-e",
@@ -192,7 +192,7 @@ def display_summary(result: auto.UpResult | auto.PreviewResult, dry_run: bool) -
     help="Show what would be synced without making changes",
 )
 @pass_orchestrator_context
-def sync_config(
+def sync(
     ctx: OrchestratorContext,
     environment: tuple[str, ...],
     dry_run: bool,
@@ -210,9 +210,9 @@ def sync_config(
 
     \b
     Example:
-        orchestrator sync-config
-        orchestrator sync-config --dry-run
-        orchestrator sync-config --environment proxmox
+        orchestrator config sync
+        orchestrator config sync --dry-run
+        orchestrator config sync --environment proxmox
     """
     click.echo("🔐 Syncing configuration to Pulumi ESC")
     click.echo()

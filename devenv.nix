@@ -35,7 +35,7 @@
   scripts.bootstrap.exec = ''
     echo "🚀 Bootstrapping Proxmox node..."
     echo "Usage: bootstrap <node-name>"
-    uv run --directory orchestrator orchestrator bootstrap "$@"
+    uv run --directory orchestrator orchestrator node bootstrap "$@"
   '';
 
   scripts.provision.exec = ''
@@ -50,7 +50,7 @@
 
   scripts.sync-config.exec = ''
     echo "🔄 Syncing config to ESC..."
-    uv run --directory orchestrator orchestrator sync-config "$@"
+    uv run --directory orchestrator orchestrator config sync "$@"
   '';
 
   scripts.edit-secret = {

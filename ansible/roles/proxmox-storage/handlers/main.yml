@@ -1,0 +1,5 @@
+---
+# Handlers for proxmox-storage role
+
+# No handlers needed for storage configuration
+# ZFS changes take effect immediately

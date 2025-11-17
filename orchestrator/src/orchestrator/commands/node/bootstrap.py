@@ -69,7 +69,7 @@ def bootstrap(
 
     \b
     Example:
-        orchestrator bootstrap rk1
+        orchestrator node bootstrap rk1
     """
     click.secho(f"🚀 Bootstrapping node: {node_name}", fg="cyan", bold=True)
     click.echo()

@@ -1,0 +1,52 @@
+---
+# Verify that required physical interfaces exist
+
+- name: List available network interfaces
+  ansible.builtin.command: ls /sys/class/net
+  register: network_interfaces
+  changed_when: false
+
+- name: Check if vRack interface exists
+  ansible.builtin.stat:
+    path: "/sys/class/net/{{ vrack_interface }}"
+  register: vrack_interface_stat
+
+- name: Fail if vRack interface is missing
+  ansible.builtin.fail:
+    msg: >-
+      vRack interface {{ vrack_interface }} not found. Available interfaces:
+      {{ network_interfaces.stdout.split() | join(', ') }}
+  when: not vrack_interface_stat.stat.exists
+
+- name: Check if public bridge exists
+  ansible.builtin.stat:
+    path: "/sys/class/net/{{ public_bridge }}"
+  register: public_bridge_stat
+
+- name: Warn if public bridge missing
+  ansible.builtin.debug:
+    msg: "WARNING: Public bridge {{ public_bridge }} not found. This is unusual for Proxmox installations."
+  when: not public_bridge_stat.stat.exists
+
+- name: Get current vRack interface status
+  ansible.builtin.command: "ip addr show {{ vrack_interface }}"
+  register: vrack_interface_status
+  changed_when: false
+
+- name: Display vRack interface status
+  ansible.builtin.debug:
+    msg: "{{ vrack_interface_status.stdout_lines }}"
+  when: networking_verbose | default(false)
+
+- name: Check if vRack bridge already exists
+  ansible.builtin.stat:
+    path: "/sys/class/net/{{ vrack_bridge }}"
+  register: vrack_bridge_stat
+
+- name: Set bridge exists fact
+  ansible.builtin.set_fact:
+    vrack_bridge_exists: "{{ vrack_bridge_stat.stat.exists }}"
+
+- name: Display bridge status
+  ansible.builtin.debug:
+    msg: "vRack bridge {{ vrack_bridge }} {{ 'already exists' if vrack_bridge_exists else 'will be created' }}"

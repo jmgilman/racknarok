@@ -1,0 +1,53 @@
+---
+# Default variables for proxmox-storage role
+
+# === REQUIRED VARIABLES (must be provided by caller) ===
+# storage_pools: List of storage pools to create
+#   Example:
+#   storage_pools:
+#     - name: nvme-pool
+#       type: zfs
+#       pool: rpool-vms
+#       device: /dev/nvme1n1
+#       content: ["images", "rootdir"]
+#       compression: lz4
+#       zfs_options:
+#         ashift: 12
+#         atime: off
+
+# === OPTIONAL VARIABLES (have defaults) ===
+
+# Force creation even if disk contains data
+# WARNING: This will destroy existing data!
+storage_force_create: false
+
+# Verify disk exists and is accessible before operations
+storage_verify_disk: true
+
+# Register storage pools in Proxmox configuration
+storage_register_proxmox: true
+
+# Install ZFS packages if needed
+zfs_install_packages: true
+
+# Verbose output for debugging
+storage_verbose: false
+
+# Package names
+zfs_packages:
+  - zfsutils-linux
+  - zfs-dkms
+
+# Proxmox storage configuration file
+proxmox_storage_config: /etc/pve/storage.cfg
+
+# Default ZFS options (can be overridden per pool)
+default_zfs_options:
+  ashift: 12
+  atime: "off"
+  compression: lz4
+
+# Default content types for storage
+default_content_types:
+  zfs: ["images", "rootdir"]
+  dir: ["iso", "vztmpl", "backup"]

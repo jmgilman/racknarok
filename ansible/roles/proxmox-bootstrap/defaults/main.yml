@@ -35,7 +35,6 @@ tailscale_enable_ssh: true
 
 # Firewall configuration
 firewall_enable: true
-firewall_allow_tailscale: true
 
 # Proxmox web interface port
 proxmox_web_port: 8006
@@ -45,3 +44,9 @@ public_interface: "vmbr0"
 
 # Tailscale interface (created by Tailscale)
 tailscale_interface: "tailscale0"
+
+# Firewall state marker and rule customization
+firewall_reset_marker_path: "/var/lib/racknarok/proxmox-bootstrap/ufw_reset_done"
+firewall_ssh_port: 22
+firewall_ssh_allowed_sources: []
+firewall_proxmox_allowed_sources: []

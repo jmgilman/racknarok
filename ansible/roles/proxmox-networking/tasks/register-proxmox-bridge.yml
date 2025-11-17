@@ -1,0 +1,50 @@
+---
+# Apply and verify Proxmox network configuration
+#
+# This task applies the staged network configuration created by configure-bridge.yml
+# and verifies it's visible in both Proxmox and at the OS level.
+
+- name: Get node name for Proxmox API
+  ansible.builtin.command: hostname
+  register: proxmox_hostname
+  changed_when: false
+  become: true
+
+- name: Wait for Proxmox to detect network changes
+  ansible.builtin.wait_for:
+    timeout: 3
+  delegate_to: localhost
+
+- name: Verify bridge is registered in Proxmox
+  ansible.builtin.command: "pvesh get /nodes/{{ proxmox_hostname.stdout }}/network/{{ vrack_bridge }}"
+  register: proxmox_bridge_check
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Parse Proxmox bridge configuration
+  ansible.builtin.debug:
+    msg:
+      - "✓ Bridge {{ vrack_bridge }} is registered in Proxmox"
+      - "{{ proxmox_bridge_check.stdout_lines }}"
+  when: networking_verbose | default(false)
+
+- name: Verify bridge is active at OS level
+  ansible.builtin.command: "ip addr show {{ vrack_bridge }}"
+  register: bridge_verification
+  changed_when: false
+  become: true
+
+- name: Display OS-level bridge status
+  ansible.builtin.debug:
+    msg:
+      - "✓ Bridge {{ vrack_bridge }} is active at OS level"
+      - "{{ bridge_verification.stdout_lines }}"
+  when: networking_verbose | default(false)
+
+- name: Confirm configuration complete
+  ansible.builtin.debug:
+    msg:
+      - "✓ Bridge {{ vrack_bridge }} is fully configured and active"
+      - "  Bridge is ready for VM networking on the vRack"
+      - "{% if proxmox_bridge_check.rc == 0 %}  Proxmox UI: Datacenter > {{ proxmox_hostname.stdout }} > Network{% else %}  Note: Bridge functional but may require Proxmox restart to appear in UI{% endif %}"

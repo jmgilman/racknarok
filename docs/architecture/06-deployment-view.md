@@ -26,7 +26,7 @@ This document describes how Project Racknarok infrastructure is deployed, config
 
 **Execution**:
 ```bash
-orchestrator.py bootstrap <node-name>
+orchestrator bootstrap <node-name>
 ```
 
 **Workflow**:
@@ -38,8 +38,14 @@ orchestrator.py bootstrap <node-name>
 
 **Roles**:
 - `proxmox-bootstrap`: Install Tailscale, lock down public access, configure firewall
+  - Command: `orchestrator bootstrap <node>`
+  - Status: ✅ Implemented
 - `proxmox-networking`: Configure vRack bridges, routing, VLANs
+  - Command: `orchestrator configure-networking <node>`
+  - Status: ✅ Implemented
 - `proxmox-storage`: Set up ZFS pools, LVM volumes, storage for VMs
+  - Command: `orchestrator configure-storage <node>`
+  - Status: ✅ Implemented
 
 **Inventory Source**: ESC environment `racknarok/proxmox`
 
@@ -56,7 +62,7 @@ orchestrator.py bootstrap <node-name>
 
 **Execution**:
 ```bash
-orchestrator.py provision
+orchestrator provision
 ```
 
 **Workflow**:
@@ -83,7 +89,7 @@ orchestrator.py provision
 
 **Execution**:
 ```bash
-orchestrator.py configure-nixos
+orchestrator configure
 ```
 
 **Workflow**:
@@ -206,47 +212,67 @@ Coordinate multi-tool deployment workflows that span Ansible, Pulumi, and deploy
 ### Implementation
 
 - **Language**: Python
-- **Execution**: Single file using `uv` for dependency management
-- **Location**: `orchestrator/orchestrator.py`
-- **Dependencies**: Pulumi Automation SDK, ansible-runner, ESC SDK
+- **Execution**: Using `uv` for dependency management
+- **Location**: `orchestrator/src/orchestrator/`
+- **Dependencies**: Pulumi Automation SDK, ansible-runner, ESC SDK, Click
 
 ### Commands
 
 ```bash
-# Bootstrap a new Proxmox node
-orchestrator.py bootstrap <node-name>
+# Bootstrap a new Proxmox node (Tailscale + security lockdown)
+orchestrator bootstrap <node-name>
+
+# Configure networking (vRack bridges)
+orchestrator configure-networking <node-name>
+
+# Configure storage (ZFS pools, LVM-thin)
+orchestrator configure-storage <node-name> [--force]
 
 # Provision VMs via Pulumi
-orchestrator.py provision
+orchestrator provision
 
 # Configure NixOS VMs
-orchestrator.py configure-nixos
+orchestrator configure
 
 # Full deployment workflow
-orchestrator.py deploy
+orchestrator deploy
 
 # Sync config/secrets to ESC
-orchestrator.py sync-config
+orchestrator sync-config
 ```
 
 ### Example: Full Deployment
 
 ```bash
 # Step 1: Bootstrap Proxmox host (manual, one-time)
-orchestrator.py bootstrap rk1
+orchestrator bootstrap rk1
+# - Installs Tailscale
+# - Locks down public access
+# - Enables Tailscale-only access
 
-# Step 2: Provision VMs
-orchestrator.py provision
-# - Pulls config from ESC
-# - Runs pulumi/proxmox/ via Automation SDK
+# Step 2: Configure networking
+orchestrator configure-networking rk1
+# - Creates vRack bridge (vmbr1)
+# - Configures VLAN awareness
+# - Prepares for VM networking
+
+# Step 3: Configure storage
+orchestrator configure-storage rk1
+# - Creates ZFS pool on /dev/nvme1n1
+# - Sets up LVM-thin volumes
+# - Registers storage in Proxmox
+
+# Step 4: Provision VMs (future)
+orchestrator provision
 # - Creates Tailscale router, DNS, Talos nodes
+# - Uses storage pools from Step 3
 
-# Step 3: Configure NixOS VMs
-orchestrator.py configure-nixos
+# Step 5: Configure NixOS VMs (future)
+orchestrator configure
 # - Runs deploy-rs for each NixOS config
 # - VMs pull runtime config from ESC
 
-# Step 4: Manual Kubernetes setup
+# Step 6: Manual Kubernetes setup (future)
 # (Talos cluster init, Argo CD bootstrap - documented in runbooks)
 ```
 

@@ -1,0 +1,67 @@
+---
+# Install required storage utilities
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+
+- name: Check if ZFS packages are needed
+  ansible.builtin.set_fact:
+    needs_zfs: "{{ storage_pools | selectattr('type', 'equalto', 'zfs') | list | length > 0 }}"
+
+- name: Check if ZFS is already available
+  ansible.builtin.command: which zpool
+  register: zpool_available
+  changed_when: false
+  failed_when: false
+  when: needs_zfs
+
+- name: Install ZFS packages (if not already available)
+  ansible.builtin.apt:
+    name: "{{ zfs_packages }}"
+    state: present
+  become: true
+  when:
+    - needs_zfs
+    - zfs_install_packages | default(true)
+    - zpool_available.rc != 0
+  register: zfs_install
+
+- name: Display ZFS installation result
+  ansible.builtin.debug:
+    msg: >-
+      {% if zpool_available.rc == 0 %}
+      ZFS packages already installed via Proxmox
+      {% elif zfs_install is defined and zfs_install.changed %}
+      ZFS packages installed
+      {% elif zfs_install is defined %}
+      ZFS installation skipped (packages already present)
+      {% else %}
+      ZFS package installation skipped
+      {% endif %}
+  when: needs_zfs
+
+- name: Load ZFS kernel module
+  community.general.modprobe:
+    name: zfs
+    state: present
+  become: true
+  when: needs_zfs
+  failed_when: false
+
+- name: Verify ZFS is available
+  ansible.builtin.command: zpool list
+  register: zpool_check
+  changed_when: false
+  failed_when: false
+  become: true
+  when: needs_zfs
+
+- name: Fail if ZFS is not available
+  ansible.builtin.fail:
+    msg: "ZFS is required but not available. Please ensure Proxmox VE is properly installed with ZFS support."
+  when:
+    - needs_zfs
+    - zpool_check.rc != 0

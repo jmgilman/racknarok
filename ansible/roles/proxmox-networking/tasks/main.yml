@@ -1,0 +1,54 @@
+---
+# Main tasks for proxmox-networking role
+# Configures vRack bridge and advanced networking on Proxmox hosts
+
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - vrack_interface is defined
+      - vrack_bridge is defined
+      - vrack_ip is defined
+    fail_msg: "Required variables missing. Need: vrack_interface, vrack_bridge, vrack_ip"
+    quiet: true
+
+- name: Display configuration
+  ansible.builtin.debug:
+    msg:
+      - "Configuring Proxmox networking:"
+      - "  vRack interface: {{ vrack_interface }}"
+      - "  vRack bridge: {{ vrack_bridge }}"
+      - "  vRack IP: {{ vrack_ip }}"
+      - "  VLAN aware: {{ vrack_vlan_aware }}"
+      - "  MTU: {{ vrack_mtu }}"
+  when: networking_verbose | default(false)
+
+- name: Verify physical interfaces exist
+  ansible.builtin.include_tasks: verify-interfaces.yml
+
+- name: Check current Tailscale connectivity
+  ansible.builtin.include_tasks: check-connectivity.yml
+  when: verify_connectivity | default(true)
+
+- name: Backup network configuration
+  ansible.builtin.include_tasks: backup-config.yml
+  when: backup_config | default(true)
+
+- name: Configure vRack bridge
+  ansible.builtin.include_tasks: configure-bridge.yml
+
+- name: Apply network configuration
+  ansible.builtin.include_tasks: apply-config.yml
+
+- name: Register bridge with Proxmox API
+  ansible.builtin.include_tasks: register-proxmox-bridge.yml
+
+- name: Verify Tailscale connectivity after changes
+  ansible.builtin.include_tasks: check-connectivity.yml
+  when: verify_connectivity | default(true)
+
+- name: Display completion message
+  ansible.builtin.debug:
+    msg:
+      - "✓ Proxmox networking configured successfully!"
+      - "  Bridge {{ vrack_bridge }} is ready for VM networking"
+      - "  VMs can now be attached to the vRack network"

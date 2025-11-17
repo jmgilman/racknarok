@@ -41,9 +41,6 @@ defaults:
 
 # Repository configuration for packages
 repositories:
-  # Proxmox enterprise repo (we won't use, no subscription)
   pve_enterprise: false
-  # Proxmox no-subscription repo
   pve_no_subscription: true
-  # Ceph repos (for future distributed storage)
   ceph: false

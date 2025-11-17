@@ -1,0 +1,23 @@
+---
+# Process a single storage pool configuration
+
+- name: Validate pool configuration
+  ansible.builtin.assert:
+    that:
+      - pool.name is defined
+      - pool.type is defined
+      - pool.type in ['zfs', 'dir']
+    fail_msg: "Invalid storage pool configuration for {{ pool.name | default('unknown') }}"
+    quiet: true
+
+- name: Display pool info
+  ansible.builtin.debug:
+    msg: "Configuring {{ pool.type }} storage: {{ pool.name }}"
+
+- name: Configure ZFS pool
+  ansible.builtin.include_tasks: configure-zfs.yml
+  when: pool.type == 'zfs'
+
+- name: Register storage in Proxmox
+  ansible.builtin.include_tasks: register-proxmox-storage.yml
+  when: storage_register_proxmox | default(true)

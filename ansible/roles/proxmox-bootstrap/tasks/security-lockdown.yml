@@ -1,17 +1,39 @@
 ---
 # Security lockdown tasks - Lock down public access, allow only Tailscale
 
-- name: Install UFW (Uncomplicated Firewall)
+- name: Install UFW
   ansible.builtin.apt:
     name: ufw
     state: present
     update_cache: true
   become: true
 
+- name: Ensure firewall state marker directory exists
+  ansible.builtin.file:
+    path: "{{ firewall_reset_marker_path | dirname }}"
+    state: directory
+    mode: "0750"
+  become: true
+
+- name: Check firewall reset marker
+  ansible.builtin.stat:
+    path: "{{ firewall_reset_marker_path }}"
+  register: firewall_reset_marker
+  become: true
+
 - name: Reset UFW to default state
   community.general.ufw:
     state: reset
   become: true
+  when: not firewall_reset_marker.stat.exists
+
+- name: Record firewall baseline
+  ansible.builtin.file:
+    path: "{{ firewall_reset_marker_path }}"
+    state: touch
+    mode: "0640"
+  become: true
+  when: not firewall_reset_marker.stat.exists
 
 - name: Set UFW default policies
   community.general.ufw:
@@ -32,18 +54,29 @@
     comment: "Tailscale"
   become: true
 
-# Allow SSH from anywhere initially (will rely on Tailscale SSH later)
-# This is important to not lock ourselves out during bootstrap
-- name: Allow SSH from anywhere (port 22)
+- name: Allow SSH via Tailscale
   community.general.ufw:
     rule: allow
-    port: "22"
+    port: "{{ firewall_ssh_port }}"
     proto: tcp
-    comment: "SSH (will transition to Tailscale SSH)"
+    interface: "{{ tailscale_interface }}"
+    direction: in
+    comment: "SSH via Tailscale"
   become: true
+  when: not skip_tailscale | default(false)
 
-# Block Proxmox web interface from public internet
-# It will only be accessible via Tailscale
+- name: Allow SSH from additional sources
+  community.general.ufw:
+    rule: allow
+    port: "{{ firewall_ssh_port }}"
+    proto: tcp
+    from_ip: "{{ item }}"
+    comment: "SSH from {{ item }}"
+  become: true
+  loop: "{{ firewall_ssh_allowed_sources }}"
+  loop_control:
+    label: "{{ item }}"
+
 - name: Block Proxmox web interface from public internet
   community.general.ufw:
     rule: deny
@@ -53,9 +86,8 @@
     to_ip: any
     comment: "Block public Proxmox access"
   become: true
+  when: not skip_tailscale | default(false) or (firewall_proxmox_allowed_sources | length > 0)
 
-# Allow Proxmox web interface from Tailscale network
-# Note: This will work once Tailscale is running and we know the CIDR
 - name: Allow Proxmox web interface from Tailscale
   community.general.ufw:
     rule: allow
@@ -67,16 +99,17 @@
   become: true
   when: not skip_tailscale | default(false)
 
-# Allow established connections
-- name: Allow all established and related connections
+- name: Allow Proxmox web interface from additional sources
   community.general.ufw:
     rule: allow
-    direction: in
-    proto: any
-    from_ip: any
-    to_ip: any
-    comment: "Allow established connections"
+    port: "{{ proxmox_web_port }}"
+    proto: tcp
+    from_ip: "{{ item }}"
+    comment: "Proxmox from {{ item }}"
   become: true
+  loop: "{{ firewall_proxmox_allowed_sources }}"
+  loop_control:
+    label: "{{ item }}"
 
 - name: Enable UFW
   community.general.ufw:

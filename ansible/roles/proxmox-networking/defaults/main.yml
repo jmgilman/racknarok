@@ -1,0 +1,41 @@
+---
+# Default variables for proxmox-networking role
+
+# === REQUIRED VARIABLES (must be provided by caller) ===
+# These are typically loaded from ESC configuration:
+#
+# vrack_interface: Physical interface for vRack (e.g., 'eno2')
+# vrack_bridge: Bridge name to create (e.g., 'vmbr1')
+# vrack_ip: IP address with CIDR notation (e.g., '10.0.0.1/24')
+
+# === OPTIONAL VARIABLES (have defaults) ===
+
+# Enable VLAN awareness on the vRack bridge
+# This allows VMs to use VLAN tagging
+vrack_vlan_aware: true
+
+# MTU for the vRack bridge and interface
+# OVH vRack supports standard 1500 MTU
+vrack_mtu: 1500
+
+# Public bridge name (created by Proxmox installer)
+# This role does not modify the public bridge
+public_bridge: vmbr0
+
+# Whether to restart networking after configuration changes
+# Set to false for dry-run testing
+network_restart: true
+
+# Verify Tailscale connectivity after network changes
+# Provides safety check to ensure we didn't break remote access
+verify_connectivity: true
+
+# Backup configuration files before modification
+backup_config: true
+
+# Configuration file paths
+network_interfaces_file: /etc/network/interfaces
+network_interfaces_backup_dir: /etc/network/interfaces.d/backups
+
+# Verbose output for debugging
+networking_verbose: false

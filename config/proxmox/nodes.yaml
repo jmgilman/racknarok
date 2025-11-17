@@ -5,11 +5,11 @@ nodes:
   - name: rk1
     # Basic identity
     fqdn: rk1.racknarok.internal
-    datacenter: rbx  # OVH datacenter code
+    datacenter: rbx # OVH datacenter code
+    tailscale_host: rk1.tailda715.ts.net
 
     # SSH access for bootstrap
-    # This must be accessible before Tailscale is configured
-    ssh_host: 15.204.85.151  # Public IP from secrets/proxmox/network.enc.yaml
+    ssh_host: 15.204.85.151
     ssh_user: root
     ssh_port: 22
 
@@ -17,16 +17,15 @@ nodes:
     network:
       # Public interface (from OVH)
       public:
-        interface: eno1  # TODO: Verify actual interface name on server
-        # Public IP and gateway are in secrets/proxmox/network.enc.yaml
+        interface: eno1
 
       # vRack private network
       vrack:
-        interface: eno2  # TODO: Verify actual interface name on server
-        bridge: vmbr1    # Bridge name for VMs
+        interface: eno2
+        bridge: vmbr1
         ip: 10.0.0.1/24
-        gateway: null    # No gateway on private network
-        vlan_aware: true # Enable VLAN support on bridge
+        gateway: null
+        vlan_aware: true
 
     # Hardware details (for reference and capacity planning)
     hardware:
@@ -52,25 +51,18 @@ nodes:
         path: /var/lib/vz
         content: ["iso", "vztmpl", "backup"]
         disk: /dev/nvme0n1
-        # Built-in, usually created by Proxmox installer
 
-      # ZFS pool for VM images (disk 1)
+      # ZFS pool for VM images and Longhorn
       - name: nvme-pool
         type: zfs
         pool: rpool-vms
+        device: /dev/nvme1n1
         content: ["images", "rootdir"]
         disk: /dev/nvme1n1
         compression: lz4
-        # ZFS-specific options
         zfs_options:
           ashift: 12
           atime: off
-
-      # LVM-thin for flexible VM storage
-      - name: vm-storage
-        type: lvm-thin
-        vg: pve
-        content: ["images"]
 
   # Future nodes (template for when we add more)
   # - name: rk2

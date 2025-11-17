@@ -7,11 +7,11 @@ This module defines the root CLI group and registers all subcommands.
 import click
 
 from orchestrator.context import OrchestratorContext
-from orchestrator.commands.bootstrap import bootstrap
+from orchestrator.commands.node import node
+from orchestrator.commands.config import config
 from orchestrator.commands.provision import provision
 from orchestrator.commands.configure import configure
 from orchestrator.commands.deploy import deploy
-from orchestrator.commands.sync import sync_config
 
 
 @click.group()
@@ -40,12 +40,15 @@ def cli(ctx: click.Context, verbose: bool, debug: bool) -> None:
         click.echo("Debug mode enabled", err=True)
 
 
-# Register commands
-cli.add_command(bootstrap)
+# Register command groups
+cli.add_command(node)
+cli.add_command(config)
+
+# Register remaining standalone commands
+# TODO: These will be organized into groups in future iterations
 cli.add_command(provision)
 cli.add_command(configure)
 cli.add_command(deploy)
-cli.add_command(sync_config)
 
 
 def main() -> None:

@@ -1,0 +1,40 @@
+---
+# Backup network configuration before making changes
+
+- name: Create backup directory
+  ansible.builtin.file:
+    path: "{{ network_interfaces_backup_dir }}"
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Generate backup timestamp
+  ansible.builtin.slurp:
+    src: "{{ network_interfaces_file }}"
+  register: network_interfaces_content
+  become: true
+
+- name: Calculate network configuration checksum
+  ansible.builtin.set_fact:
+    network_interfaces_checksum: "{{ (network_interfaces_content.content | b64decode) | hash('sha1') }}"
+
+- name: Check if matching backup already exists
+  ansible.builtin.stat:
+    path: "{{ network_interfaces_backup_dir }}/interfaces.backup-{{ network_interfaces_checksum }}"
+  register: network_backup_stat
+  become: true
+
+- name: Backup current network interfaces configuration
+  ansible.builtin.copy:
+    src: "{{ network_interfaces_file }}"
+    dest: "{{ network_interfaces_backup_dir }}/interfaces.backup-{{ network_interfaces_checksum }}"
+    remote_src: true
+    mode: '0644'
+  become: true
+  when: not network_backup_stat.stat.exists
+
+- name: Display backup location
+  ansible.builtin.debug:
+    msg: "Configuration backed up to: {{ network_interfaces_backup_dir }}/interfaces.backup-{{ network_interfaces_checksum }}"
+  become: true
+  when: not network_backup_stat.stat.exists

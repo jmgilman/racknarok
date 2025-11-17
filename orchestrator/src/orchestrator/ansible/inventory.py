@@ -106,9 +106,11 @@ def get_host_vars(config: dict[str, Any], hostname: str, node_config: dict[str, 
             raise ValueError(f"No configuration found for node '{hostname}'")
 
     # Determine SSH host
-    # Priority: ssh_host > ssh.public_ip > fqdn > hostname
+    # Priority: tailscale_host > ssh_host > ssh.public_ip > fqdn > hostname
+    # After bootstrap, nodes are only accessible via Tailscale due to firewall rules
     ssh_host = (
-        node_config.get("ssh_host")
+        node_config.get("tailscale_host")
+        or node_config.get("ssh_host")
         or node_config.get("ssh", {}).get("public_ip")
         or node_config.get("fqdn")
         or hostname
