@@ -1,0 +1,51 @@
+---
+# Main tasks for proxmox-bootstrap role
+
+- block:
+    - name: Wait for Tailscale to be fully connected
+      ansible.builtin.command: tailscale status --json
+      register: tailscale_status
+      until: tailscale_status.rc == 0
+      retries: 12
+      delay: 5
+      changed_when: false
+      when: not skip_tailscale | default(false)
+  rescue:
+    - name: Show last Tailscale status error
+      ansible.builtin.debug:
+        msg:
+          - "tailscale status --json failed after {{ (tailscale_status.attempts | default(0)) }} attempts"
+          - "{{ tailscale_status.stderr | default(tailscale_status.stdout | default('no stderr/stdout captured')) }}"
+      when: tailscale_status is defined
+    - name: Abort because Tailscale did not connect
+      ansible.builtin.fail:
+        msg: "Tailscale never reported ready; refusing to continue bootstrap"
+      when: not skip_tailscale | default(false)
+
+- name: Parse Tailscale status
+  ansible.builtin.set_fact:
+    tailscale_info: "{{ tailscale_status.stdout | from_json }}"
+  when:
+    - not skip_tailscale | default(false)
+    - tailscale_status is defined
+
+- name: Display Tailscale connection info
+  ansible.builtin.debug:
+    msg:
+      - "Tailscale connected successfully!"
+      - "Tailscale IP: {{ tailscale_info.Self.TailscaleIPs[0] | default('unknown') }}"
+      - "Hostname: {{ tailscale_info.Self.HostName | default('unknown') }}"
+  when:
+    - not skip_tailscale | default(false)
+    - tailscale_info is defined
+    - tailscale_verbose | default(false)
+
+- name: Configure firewall lockdown
+  ansible.builtin.include_tasks: security-lockdown.yml
+  when: firewall_enable | default(true)
+
+- name: Create Proxmox API token for automation
+  ansible.builtin.include_tasks: api-token.yml
+
+- name: Download required ISO images
+  ansible.builtin.include_tasks: download-isos.yml

@@ -1,0 +1,87 @@
+---
+# Configure ZFS storage pool
+
+- name: Validate ZFS pool configuration
+  ansible.builtin.assert:
+    that:
+      - pool.pool is defined
+      - pool.device is defined
+    fail_msg: "ZFS pool requires 'pool' (ZFS pool name) and 'device' (physical device)"
+    quiet: true
+
+- name: Check if device exists
+  ansible.builtin.stat:
+    path: "{{ pool.device }}"
+  register: device_stat
+  become: true
+
+- name: Fail if device does not exist
+  ansible.builtin.fail:
+    msg: "Device {{ pool.device }} does not exist"
+  when:
+    - storage_verify_disk | default(true)
+    - not device_stat.stat.exists
+
+- name: Initialise ZFS property maps
+  ansible.builtin.set_fact:
+    zpool_pool_properties: {}
+    zpool_filesystem_properties: {}
+
+- name: Merge filesystem properties from zfs_options
+  ansible.builtin.set_fact:
+    zpool_filesystem_properties: "{{ zpool_filesystem_properties | combine({ item.key: item.value }) }}"
+  loop: "{{ (pool.zfs_options | default({})) | dict2items }}"
+  when: item.key != 'ashift'
+
+- name: Merge filesystem properties from explicit configuration
+  ansible.builtin.set_fact:
+    zpool_filesystem_properties: "{{ zpool_filesystem_properties | combine(pool.filesystem_properties) }}"
+  when: pool.filesystem_properties is defined
+
+- name: Merge compression property if provided
+  ansible.builtin.set_fact:
+    zpool_filesystem_properties: "{{ zpool_filesystem_properties | combine({'compression': pool.compression}) }}"
+  when: pool.compression is defined
+
+- name: Merge ZFS pool properties
+  ansible.builtin.set_fact:
+    zpool_pool_properties: "{{ zpool_pool_properties | combine({'ashift': pool.zfs_options.ashift}) }}"
+  when:
+    - pool.zfs_options is defined
+    - pool.zfs_options.ashift is defined
+
+- name: Merge additional pool properties
+  ansible.builtin.set_fact:
+    zpool_pool_properties: "{{ zpool_pool_properties | combine(pool.pool_properties) }}"
+  when: pool.pool_properties is defined
+
+- name: Determine zpool vdev layout
+  ansible.builtin.set_fact:
+    zpool_vdevs: >-
+      {{ pool.vdevs
+         if pool.vdevs is defined
+         else ([{'disks': pool.devices}] if pool.devices is defined
+               else [{'disks': [pool.device]}]) }}
+
+- name: Ensure ZFS pool is present
+  community.general.zpool:
+    name: "{{ pool.pool }}"
+    state: present
+    force: "{{ storage_force_create | default(false) | bool }}"
+    vdevs: "{{ zpool_vdevs }}"
+    pool_properties: "{{ zpool_pool_properties if zpool_pool_properties else omit }}"
+    filesystem_properties: "{{ zpool_filesystem_properties if zpool_filesystem_properties else omit }}"
+  become: true
+  register: zpool_manage
+
+- name: Debug ZFS pool changes
+  ansible.builtin.debug:
+    msg:
+      - "ZFS pool '{{ pool.pool }}' changed: {{ zpool_manage.changed | default(false) }}"
+      - "Applied pool properties: {{ zpool_pool_properties }}"
+      - "Applied filesystem properties: {{ zpool_filesystem_properties }}"
+  when: storage_verbose | default(false)
+
+- name: Record pool name for Proxmox registration
+  ansible.builtin.set_fact:
+    pool_to_use: "{{ pool.pool }}"

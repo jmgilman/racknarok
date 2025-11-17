@@ -1,0 +1,128 @@
+---
+# Security lockdown tasks - Lock down public access, allow only Tailscale
+
+- name: Install UFW
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: true
+  become: true
+
+- name: Ensure firewall state marker directory exists
+  ansible.builtin.file:
+    path: "{{ firewall_reset_marker_path | dirname }}"
+    state: directory
+    mode: "0750"
+  become: true
+
+- name: Check firewall reset marker
+  ansible.builtin.stat:
+    path: "{{ firewall_reset_marker_path }}"
+  register: firewall_reset_marker
+  become: true
+
+- name: Reset UFW to default state
+  community.general.ufw:
+    state: reset
+  become: true
+  when: not firewall_reset_marker.stat.exists
+
+- name: Record firewall baseline
+  ansible.builtin.file:
+    path: "{{ firewall_reset_marker_path }}"
+    state: touch
+    mode: "0640"
+  become: true
+  when: not firewall_reset_marker.stat.exists
+
+- name: Set UFW default policies
+  community.general.ufw:
+    direction: "{{ item.direction }}"
+    policy: "{{ item.policy }}"
+  become: true
+  loop:
+    - { direction: incoming, policy: deny }
+    - { direction: outgoing, policy: allow }
+    - { direction: routed, policy: allow }
+
+# Allow Tailscale UDP port
+- name: Allow Tailscale UDP port 41641
+  community.general.ufw:
+    rule: allow
+    port: "41641"
+    proto: udp
+    comment: "Tailscale"
+  become: true
+
+- name: Allow SSH via Tailscale
+  community.general.ufw:
+    rule: allow
+    port: "{{ firewall_ssh_port }}"
+    proto: tcp
+    interface: "{{ tailscale_interface }}"
+    direction: in
+    comment: "SSH via Tailscale"
+  become: true
+  when: not skip_tailscale | default(false)
+
+- name: Allow SSH from additional sources
+  community.general.ufw:
+    rule: allow
+    port: "{{ firewall_ssh_port }}"
+    proto: tcp
+    from_ip: "{{ item }}"
+    comment: "SSH from {{ item }}"
+  become: true
+  loop: "{{ firewall_ssh_allowed_sources }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Block Proxmox web interface from public internet
+  community.general.ufw:
+    rule: deny
+    port: "{{ proxmox_web_port }}"
+    proto: tcp
+    from_ip: any
+    to_ip: any
+    comment: "Block public Proxmox access"
+  become: true
+  when: not skip_tailscale | default(false) or (firewall_proxmox_allowed_sources | length > 0)
+
+- name: Allow Proxmox web interface from Tailscale
+  community.general.ufw:
+    rule: allow
+    port: "{{ proxmox_web_port }}"
+    proto: tcp
+    interface: "{{ tailscale_interface }}"
+    direction: in
+    comment: "Proxmox via Tailscale"
+  become: true
+  when: not skip_tailscale | default(false)
+
+- name: Allow Proxmox web interface from additional sources
+  community.general.ufw:
+    rule: allow
+    port: "{{ proxmox_web_port }}"
+    proto: tcp
+    from_ip: "{{ item }}"
+    comment: "Proxmox from {{ item }}"
+  become: true
+  loop: "{{ firewall_proxmox_allowed_sources }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled
+  become: true
+
+- name: Display firewall status
+  ansible.builtin.command: ufw status verbose
+  register: ufw_status
+  changed_when: false
+  become: true
+
+- name: Show firewall configuration
+  ansible.builtin.debug:
+    msg: "{{ ufw_status.stdout_lines }}"
+  when: tailscale_verbose | default(false)

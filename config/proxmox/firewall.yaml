@@ -1,0 +1,67 @@
+# Host-level firewall configuration for Proxmox nodes
+# Applied via Ansible during bootstrap and configuration
+
+firewall:
+  enabled: true
+
+  # Default policies
+  policies:
+    input: DROP
+    output: ACCEPT
+    forward: DROP
+
+  # Rules applied to all nodes
+  rules:
+    # Allow Tailscale
+    - name: allow-tailscale-udp
+      direction: in
+      protocol: udp
+      port: 41641
+      source: any
+      action: accept
+      comment: "Tailscale WireGuard"
+
+    # SSH (only during bootstrap, then disabled)
+    - name: allow-ssh-bootstrap
+      direction: in
+      protocol: tcp
+      port: 22
+      source: any
+      action: accept
+      enabled: false  # Disabled after bootstrap
+      comment: "SSH for initial bootstrap only"
+
+    # Proxmox web UI (only via Tailscale after bootstrap)
+    - name: allow-proxmox-web
+      direction: in
+      protocol: tcp
+      port: 8006
+      source: 100.64.0.0/10  # Tailscale CGNAT range
+      action: accept
+      comment: "Proxmox web UI via Tailscale"
+
+    # Allow vRack traffic
+    - name: allow-vrack
+      direction: in
+      interface: vmbr1
+      source: 10.0.0.0/24
+      action: accept
+      comment: "Internal vRack network"
+
+    # Allow established/related
+    - name: allow-established
+      direction: in
+      state: ["ESTABLISHED", "RELATED"]
+      action: accept
+
+  # Cluster-specific rules (future)
+  cluster_rules:
+    enabled: false
+    # When Proxmox clustering is enabled:
+    # rules:
+    #   - name: allow-corosync
+    #     protocol: udp
+    #     ports: [5404, 5405]
+    #     source: 10.0.0.0/24
+    #     action: accept
+    #     comment: "Proxmox Corosync cluster communication"

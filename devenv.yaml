@@ -1,0 +1,4 @@
+# https://devenv.sh/inputs/
+inputs:
+  nixpkgs:
+    url: github:NixOS/nixpkgs/nixpkgs-unstable

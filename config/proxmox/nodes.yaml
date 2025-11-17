@@ -1,0 +1,86 @@
+# Per-node Proxmox configuration
+# Each node represents a physical server running Proxmox VE
+
+nodes:
+  - name: rk1
+    # Basic identity
+    fqdn: rk1.racknarok.internal
+    datacenter: rbx # OVH datacenter code
+    tailscale_host: rk1.tailda715.ts.net
+
+    # SSH access for bootstrap
+    ssh_host: 15.204.85.151
+    ssh_user: root
+    ssh_port: 22
+
+    # Network configuration
+    network:
+      # Public interface (from OVH)
+      public:
+        interface: eno1
+
+      # vRack private network
+      vrack:
+        interface: eno2
+        bridge: vmbr1
+        ip: 10.0.0.1/24
+        gateway: null
+        vlan_aware: true
+
+    # Hardware details (for reference and capacity planning)
+    hardware:
+      cpu:
+        model: "AMD Epyc 7413"
+        cores: 24
+        threads: 48
+      memory:
+        total_gb: 128
+      disks:
+        - device: /dev/nvme0n1
+          size_gb: 960
+          purpose: proxmox_os
+        - device: /dev/nvme1n1
+          size_gb: 960
+          purpose: vm_storage
+
+    # Storage configuration for this node
+    storage:
+      # Proxmox OS storage (disk 0)
+      - name: local
+        type: dir
+        path: /var/lib/vz
+        content: ["iso", "vztmpl", "backup"]
+        disk: /dev/nvme0n1
+
+      # ZFS pool for VM images and Longhorn
+      - name: nvme-pool
+        type: zfs
+        pool: rpool-vms
+        device: /dev/nvme1n1
+        content: ["images", "rootdir"]
+        disk: /dev/nvme1n1
+        compression: lz4
+        zfs_options:
+          ashift: 12
+          atime: off
+
+  # Future nodes (template for when we add more)
+  # - name: rk2
+  #   fqdn: rk2.racknarok.internal
+  #   datacenter: rbx
+  #   network:
+  #     public:
+  #       interface: eno1
+  #     vrack:
+  #       interface: eno2
+  #       bridge: vmbr1
+  #       ip: 10.0.0.2/24
+  #   hardware:
+  #     cpu:
+  #       model: "TBD"
+  #       cores: 0
+  #       threads: 0
+  #     memory:
+  #       total_gb: 0
+  #     disks: []
+  #   storage: []

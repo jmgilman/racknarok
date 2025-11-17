@@ -1,0 +1,35 @@
+---
+# Main tasks for proxmox-storage role
+# Configures storage pools (ZFS) on Proxmox hosts
+
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - storage_pools is defined
+      - storage_pools | length > 0
+    fail_msg: "storage_pools must be defined and contain at least one storage configuration"
+    quiet: true
+
+- name: Display storage configuration
+  ansible.builtin.debug:
+    msg:
+      - "Configuring Proxmox storage:"
+      - "{{ storage_pools | to_nice_yaml }}"
+  when: storage_verbose | default(false)
+
+- name: Install storage utilities
+  ansible.builtin.include_tasks: install-packages.yml
+
+- name: Process each storage pool
+  ansible.builtin.include_tasks: process-storage-pool.yml
+  loop: "{{ storage_pools }}"
+  loop_control:
+    loop_var: pool
+    label: "{{ pool.name }} ({{ pool.type }})"
+
+- name: Display completion message
+  ansible.builtin.debug:
+    msg:
+      - "✓ Proxmox storage configured successfully!"
+      - "  {{ storage_pools | length }} storage pool(s) ready"
+      - "  Check status with: pvesm status"

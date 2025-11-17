@@ -1,0 +1,75 @@
+---
+# Verify Proxmox-managed network configuration
+#
+# Note: Proxmox's 'pvesh create /nodes/{node}/network' command automatically
+# applies the configuration and brings up interfaces. This task verifies the
+# configuration is correct and active.
+
+- name: Wait for network to stabilize after Proxmox configuration
+  ansible.builtin.wait_for:
+    timeout: 3
+  delegate_to: localhost
+
+- name: Verify bridge is up and configured
+  ansible.builtin.command: "ip addr show {{ vrack_bridge }}"
+  register: bridge_status
+  changed_when: false
+  become: true
+  retries: 3
+  delay: 2
+  until: bridge_status.rc == 0
+
+- name: Display bridge status
+  ansible.builtin.debug:
+    msg: "{{ bridge_status.stdout_lines }}"
+  when: networking_verbose | default(false)
+
+- name: Verify bridge has correct IP address
+  ansible.builtin.assert:
+    that:
+      - vrack_ip.split('/')[0] in bridge_status.stdout
+    fail_msg: "Bridge {{ vrack_bridge }} does not have expected IP {{ vrack_ip }}"
+    success_msg: "✓ Bridge configured with correct IP address"
+
+- name: Verify bridge is in UP state
+  ansible.builtin.assert:
+    that:
+      - "'UP' in bridge_status.stdout"
+    fail_msg: "Bridge {{ vrack_bridge }} is not in UP state"
+    success_msg: "✓ Bridge is in UP state"
+
+- name: Check bridge members
+  ansible.builtin.command: "brctl show {{ vrack_bridge }}"
+  register: bridge_members
+  changed_when: false
+  become: true
+
+- name: Display bridge members
+  ansible.builtin.debug:
+    msg: "{{ bridge_members.stdout_lines }}"
+  when: networking_verbose | default(false)
+
+- name: Verify physical interface is attached to bridge
+  ansible.builtin.assert:
+    that:
+      - vrack_interface in bridge_members.stdout
+    fail_msg: "Interface {{ vrack_interface }} is not attached to bridge {{ vrack_bridge }}"
+    success_msg: "✓ Physical interface attached to bridge successfully"
+
+- name: Check bridge VLAN awareness (if enabled)
+  ansible.builtin.command: "bridge vlan show dev {{ vrack_bridge }}"
+  register: bridge_vlan
+  changed_when: false
+  failed_when: false
+  become: true
+  when: vrack_vlan_aware | default(true)
+
+- name: Display VLAN configuration
+  ansible.builtin.debug:
+    msg:
+      - "VLAN-aware bridge configuration:"
+      - "{{ bridge_vlan.stdout_lines }}"
+  when:
+    - networking_verbose | default(false)
+    - vrack_vlan_aware | default(true)
+    - bridge_vlan.rc == 0

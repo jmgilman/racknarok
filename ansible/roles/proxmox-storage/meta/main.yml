@@ -1,0 +1,14 @@
+---
+# Role metadata
+galaxy_info:
+  author: Project Racknarok
+  description: Configure Proxmox storage pools (ZFS)
+  license: MIT
+  min_ansible_version: "2.12"
+  platforms:
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+
+dependencies: []

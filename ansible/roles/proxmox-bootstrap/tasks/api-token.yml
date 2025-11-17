@@ -1,0 +1,106 @@
+---
+# API Token creation tasks for Proxmox automation
+#
+# This task file creates a Proxmox API token for infrastructure automation.
+# It is idempotent - only creates the token if it doesn't already exist.
+#
+# The token is written to a temporary file and fetched back to the orchestrator
+# for secure storage in SOPS-encrypted secrets and syncing to Pulumi ESC.
+
+- name: Ensure automation user exists
+  ansible.builtin.command:
+    cmd: pveum user list --output-format json
+  register: user_list
+  changed_when: false
+  failed_when: false
+
+- name: Parse user list
+  ansible.builtin.set_fact:
+    user_list_parsed: "{{ user_list.stdout | from_json }}"
+  when: user_list.rc == 0
+
+- name: Check if automation user exists
+  ansible.builtin.set_fact:
+    automation_user_exists: "{{ user_list_parsed | selectattr('userid', 'equalto', proxmox_api_user) | list | length > 0 }}"
+  when: user_list_parsed is defined
+
+- name: Create automation user if not exists
+  ansible.builtin.command:
+    cmd: "pveum user add {{ proxmox_api_user }} --comment 'Infrastructure automation user created by orchestrator'"
+  when:
+    - user_list_parsed is defined
+    - not automation_user_exists | default(false)
+  register: user_create_result
+  changed_when: user_create_result.rc == 0
+  failed_when:
+    - user_create_result.rc != 0
+    - "'already exists' not in user_create_result.stderr"
+
+- name: Grant administrator permissions to automation user
+  ansible.builtin.command:
+    cmd: "pveum acl modify / --users {{ proxmox_api_user }} --roles Administrator"
+  when:
+    - user_list_parsed is defined
+  changed_when: true  # ACL modify doesn't have a clean idempotency check
+  register: acl_result
+  failed_when:
+    - acl_result.rc != 0
+
+- name: Check if API token exists
+  ansible.builtin.command:
+    cmd: "pveum user token list {{ proxmox_api_user }} --output-format json"
+  register: token_list
+  changed_when: false
+  failed_when: false
+
+- name: Parse token list
+  ansible.builtin.set_fact:
+    token_list_parsed: "{{ token_list.stdout | from_json if token_list.rc == 0 else [] }}"
+
+- name: Check if specific token exists
+  ansible.builtin.set_fact:
+    api_token_exists: "{{ token_list_parsed | selectattr('tokenid', 'equalto', proxmox_api_token_name) | list | length > 0 }}"
+
+- name: Create API token if not exists
+  ansible.builtin.command:
+    cmd: "pveum user token add {{ proxmox_api_user }} {{ proxmox_api_token_name }} --privsep 0 --expire 0 --comment '{{ proxmox_api_token_comment }}' --output-format json"
+  register: token_create_result
+  when: not api_token_exists | default(false)
+  changed_when: token_create_result.rc == 0
+  failed_when:
+    - token_create_result.rc != 0
+    - "'already exists' not in token_create_result.stderr"
+
+- name: Write token to temporary file on remote host
+  ansible.builtin.copy:
+    content: "{{ token_create_result.stdout }}"
+    dest: "{{ proxmox_api_token_temp_file }}"
+    mode: '0600'
+  when:
+    - token_create_result is changed
+    - token_create_result.stdout is defined
+
+- name: Fetch token file to local machine for orchestrator
+  ansible.builtin.fetch:
+    src: "{{ proxmox_api_token_temp_file }}"
+    dest: "{{ proxmox_api_token_local_file }}"
+    flat: yes
+  when:
+    - token_create_result is changed
+  register: token_fetch_result
+
+- name: Clean up remote token file
+  ansible.builtin.file:
+    path: "{{ proxmox_api_token_temp_file }}"
+    state: absent
+  when:
+    - token_create_result is changed
+
+- name: Display token creation status
+  ansible.builtin.debug:
+    msg:
+      - "API Token Status:"
+      - "  User: {{ proxmox_api_user }}"
+      - "  Token: {{ proxmox_api_token_name }}"
+      - "  Status: {{ 'Created (new)' if token_create_result is changed else 'Already exists (skipped)' }}"
+      - "  Local file: {{ proxmox_api_token_local_file if token_create_result is changed else 'N/A - token already existed' }}"

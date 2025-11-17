@@ -1,0 +1,1 @@
+Please familiarize yourself with this repo. We'll be working on the project today. Wait for further instructions.

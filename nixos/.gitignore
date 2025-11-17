@@ -1,0 +1,14 @@
+# Nix build results
+result
+result-*
+
+# Nix flake lock file (we'll commit this, but adding for reference)
+# flake.lock
+
+# Unencrypted secrets (NEVER commit these!)
+secrets/secrets.yaml
+**/secrets.yaml
+!secrets/*.enc.yaml
+
+# Development artifacts
+.direnv/

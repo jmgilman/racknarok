@@ -1,0 +1,15 @@
+---
+# Ansible Galaxy requirements for Project Racknarok
+
+collections:
+  # Tailscale management collection
+  # Provides roles and modules for installing and configuring Tailscale
+  - name: artis3n.tailscale
+    version: ">=5.0.0"
+    source: https://galaxy.ansible.com
+
+  # Community general collection
+  # Provides UFW firewall module and other utilities
+  - name: community.general
+    version: ">=7.0.0"
+    source: https://galaxy.ansible.com

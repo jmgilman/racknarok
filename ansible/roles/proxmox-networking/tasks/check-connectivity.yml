@@ -1,0 +1,50 @@
+---
+# Check Tailscale connectivity to ensure we don't lock ourselves out
+
+- name: Check if Tailscale is running
+  ansible.builtin.systemd:
+    name: tailscaled
+  register: tailscale_service
+  failed_when: false
+
+- name: Determine Tailscale service state
+  ansible.builtin.set_fact:
+    tailscale_active: "{{ (tailscale_service.status | default({})).ActiveState | default('') == 'active' }}"
+
+- name: Fail if Tailscale service is not active
+  ansible.builtin.fail:
+    msg: >
+      Tailscale service is not active; refusing to modify network configuration.
+      Set verify_connectivity=false to bypass this safety check.
+  when: not tailscale_active
+
+- name: Get Tailscale status
+  ansible.builtin.command: tailscale status --json
+  register: tailscale_status
+  changed_when: false
+  failed_when: tailscale_status.rc != 0
+  when: tailscale_active
+
+- name: Parse Tailscale status
+  ansible.builtin.set_fact:
+    tailscale_info: "{{ tailscale_status.stdout | from_json }}"
+  when:
+    - tailscale_active
+
+- name: Verify Tailscale is connected
+  ansible.builtin.assert:
+    that:
+      - tailscale_info.Self.Online is defined
+      - tailscale_info.Self.Online | bool
+    fail_msg: "Tailscale is not connected! Cannot safely modify network configuration."
+    success_msg: "✓ Tailscale connectivity verified"
+  when:
+    - tailscale_active
+    - tailscale_info is defined
+
+- name: Display Tailscale IP
+  ansible.builtin.debug:
+    msg: "Tailscale IP: {{ tailscale_info.Self.TailscaleIPs[0] | default('unknown') }}"
+  when:
+    - networking_verbose | default(false)
+    - tailscale_info is defined

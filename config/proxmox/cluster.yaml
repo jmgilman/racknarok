@@ -1,0 +1,46 @@
+# Cluster-wide Proxmox configuration
+# This file contains settings that apply to all Proxmox nodes
+
+cluster:
+  name: racknarok-pve
+  # Future: when we form a Proxmox cluster
+  # enabled: true
+  # quorum_votes: 3
+
+# Shared settings across all nodes
+defaults:
+  # Timezone for all nodes
+  timezone: UTC
+
+  # DNS servers for Proxmox hosts
+  dns_servers:
+    - 1.1.1.1
+    - 8.8.8.8
+
+  # NTP servers
+  ntp_servers:
+    - 0.pool.ntp.org
+    - 1.pool.ntp.org
+
+  # Default storage configuration templates
+  storage_templates:
+    vm_images:
+      type: zfs
+      content: ["images", "rootdir"]
+      compression: lz4
+
+    vm_data:
+      type: lvm-thin
+      content: ["images"]
+
+  # Network defaults
+  network:
+    mtu: 1500
+    # vRack network (OVH private network)
+    vrack_network: 10.0.0.0/24
+
+# Repository configuration for packages
+repositories:
+  pve_enterprise: false
+  pve_no_subscription: true
+  ceph: false

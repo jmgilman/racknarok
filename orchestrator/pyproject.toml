@@ -1,0 +1,31 @@
+[project]
+name = "orchestrator"
+version = "0.1.0"
+description = "Racknarok Infrastructure Orchestrator - CLI tool for coordinating deployment workflows"
+readme = "README.md"
+authors = [
+    { name = "Joshua Gilman", email = "joshuagilman@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "click>=8.0",
+    "pulumi>=3.0",
+    "pulumi-esc-sdk>=0.10.0",
+    "ansible-runner>=2.3",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+orchestrator = "orchestrator:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.7,<0.10.0"]
+build-backend = "uv_build"

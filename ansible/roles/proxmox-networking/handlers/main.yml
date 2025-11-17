@@ -1,0 +1,11 @@
+---
+# Handlers for proxmox-networking role
+
+- name: restart networking
+  ansible.builtin.systemd:
+    name: networking
+    state: restarted
+  become: true
+  when: network_restart | default(true)
+  # Only restart if we're confident we won't lose connectivity
+  listen: restart networking

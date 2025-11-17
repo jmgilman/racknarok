@@ -1,0 +1,59 @@
+---
+# Default variables for proxmox-bootstrap role
+#
+# IMPORTANT: Execution order
+# 1. Defaults are loaded
+# 2. Caller (orchestrator) overrides with extravars
+# 3. Dependency role (artis3n.tailscale.machine) executes with these vars
+# 4. Tasks in tasks/main.yml execute after dependency completes
+#
+# Therefore: All required variables MUST be provided by the caller (orchestrator)
+# before the role is invoked. Validation happens in the orchestrator, not here.
+
+# Skip Tailscale installation (for testing)
+skip_tailscale: false
+
+# === REQUIRED VARIABLES (must be provided by caller) ===
+# These have no defaults and MUST be set via extravars:
+#
+# tailscale_authkey: OAuth client secret (tskey-client-xxxxx)
+# tailscale_tags: List of ACL tags (e.g., ['proxmox'])
+#
+# Note: Proxmox hosts do NOT advertise subnet routes. Route advertisement
+# is handled by a dedicated router VM deployed separately.
+
+# === OPTIONAL VARIABLES (have defaults) ===
+
+# Tailscale configuration
+tailscale_oauth_ephemeral: false
+tailscale_oauth_preauthorized: true
+tailscale_state: latest
+tailscale_verbose: true
+
+# Enable Tailscale SSH
+tailscale_enable_ssh: true
+
+# Firewall configuration
+firewall_enable: true
+
+# Proxmox web interface port
+proxmox_web_port: 8006
+
+# Public interface (typically the WAN interface on OVH servers)
+public_interface: "vmbr0"
+
+# Tailscale interface (created by Tailscale)
+tailscale_interface: "tailscale0"
+
+# Firewall state marker and rule customization
+firewall_reset_marker_path: "/var/lib/racknarok/proxmox-bootstrap/ufw_reset_done"
+firewall_ssh_port: 22
+firewall_ssh_allowed_sources: []
+firewall_proxmox_allowed_sources: []
+
+# API Token configuration
+proxmox_api_user: "automation@pve"
+proxmox_api_token_name: "infra"
+proxmox_api_token_comment: "Infrastructure automation token created by orchestrator"
+proxmox_api_token_temp_file: "/tmp/proxmox-api-token.json"
+# Local file path will be set by orchestrator based on inventory_hostname

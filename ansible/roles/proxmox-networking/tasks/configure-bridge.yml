@@ -1,0 +1,105 @@
+---
+# Configure the vRack bridge using Proxmox API
+
+- name: Install bridge-utils
+  ansible.builtin.apt:
+    name: bridge-utils
+    state: present
+    update_cache: false
+  become: true
+
+- name: Get node name for Proxmox API
+  ansible.builtin.command: hostname
+  register: proxmox_hostname
+  changed_when: false
+  become: true
+
+- name: Check if vRack bridge already exists in Proxmox
+  ansible.builtin.command: "pvesh get /nodes/{{ proxmox_hostname.stdout }}/network/{{ vrack_bridge }}"
+  register: bridge_exists_check
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Set bridge exists fact
+  ansible.builtin.set_fact:
+    bridge_exists_in_proxmox: "{{ bridge_exists_check.rc == 0 }}"
+
+- name: Display existing bridge status
+  ansible.builtin.debug:
+    msg: "Bridge {{ vrack_bridge }} {{ 'already exists' if bridge_exists_in_proxmox else 'will be created' }} in Proxmox"
+
+- name: Check if bridge exists at OS level
+  ansible.builtin.command: "ip link show {{ vrack_bridge }}"
+  register: bridge_os_check
+  changed_when: false
+  failed_when: false
+  become: true
+  when: not bridge_exists_in_proxmox
+
+- name: Remove OS-level bridge if it exists but not in Proxmox config
+  ansible.builtin.command: "ip link delete {{ vrack_bridge }}"
+  become: true
+  when:
+    - not bridge_exists_in_proxmox
+    - bridge_os_check.rc == 0
+  changed_when: true
+  register: bridge_removal
+
+- name: Display bridge removal
+  ansible.builtin.debug:
+    msg: "Removed OS-level bridge {{ vrack_bridge }} to allow Proxmox to manage it"
+  when:
+    - bridge_removal is defined
+    - bridge_removal.changed
+
+- name: Parse bridge addressing details
+  ansible.builtin.set_fact:
+    bridge_ip: "{{ vrack_ip | ansible.utils.ipaddr('address') }}"
+    bridge_netmask: "{{ vrack_ip | ansible.utils.ipaddr('netmask') }}"
+
+- name: Validate vRack IP format
+  ansible.builtin.assert:
+    that:
+      - bridge_ip is string
+      - bridge_netmask is string
+    fail_msg: "Invalid vRack IP '{{ vrack_ip }}'. Expected CIDR notation such as 10.0.0.1/24."
+
+- name: Create bridge via Proxmox API
+  ansible.builtin.command: >
+    pvesh create /nodes/{{ proxmox_hostname.stdout }}/network
+    --iface {{ vrack_bridge }}
+    --type bridge
+    --autostart 1
+    --bridge_ports {{ vrack_interface }}
+    --address {{ bridge_ip }}
+    --netmask {{ bridge_netmask }}
+    {% if vrack_vlan_aware | default(true) %}--bridge_vlan_aware 1{% endif %}
+    {% if vrack_mtu is defined and vrack_mtu %}--mtu {{ vrack_mtu }}{% endif %}
+    --comments "vRack bridge - managed by Ansible"
+  become: true
+  when: not bridge_exists_in_proxmox
+  register: bridge_create_result
+  changed_when: true
+
+- name: Apply network configuration changes
+  ansible.builtin.command: "ifreload -a"
+  become: true
+  when: not bridge_exists_in_proxmox
+  register: ifreload_result
+  changed_when: true
+
+- name: Display bridge creation result
+  ansible.builtin.debug:
+    msg:
+      - "✓ Bridge {{ vrack_bridge }} created via Proxmox API"
+      - "{{ bridge_create_result.stdout_lines | default(['Configuration staged']) }}"
+  when:
+    - networking_verbose | default(false)
+    - bridge_create_result is defined
+    - not bridge_exists_in_proxmox
+
+- name: Display skip message if bridge already configured
+  ansible.builtin.debug:
+    msg: "✓ Bridge {{ vrack_bridge }} already configured in Proxmox, skipping creation"
+  when: bridge_exists_in_proxmox
